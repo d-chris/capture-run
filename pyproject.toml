@@ -1,0 +1,16 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = [ "poetry-core" ]
+
+[tool.poetry]
+name = "subprocess-run"
+version = "0.1.0"
+description = ""
+authors = [ "Christoph Dörrer <d-chris@web.de>" ]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.5"
