@@ -4,8 +4,16 @@ import io
 import subprocess
 import sys
 import threading
-from contextlib import ExitStack
+from typing import TYPE_CHECKING
 from typing import Any
+
+if TYPE_CHECKING:
+    from typing import Protocol
+
+    class WritableStream(Protocol):
+        def write(self, data: str | bytes) -> int: ...
+
+        def getvalue(self) -> str | bytes: ...
 
 
 class StreamIO:
@@ -17,7 +25,7 @@ class StreamIO:
         *,
         encoding: str | None = None,
         text: bool = False,
-    ):
+    ) -> WritableStream:
         if encoding is None and text is False:
             return io.BytesIO(initial_value)
         else:
@@ -25,7 +33,7 @@ class StreamIO:
 
 
 def run(
-    *popenargs: subprocess._CMD,
+    *args: subprocess._CMD,
     input: str | None = None,
     capture_output: bool = False,
     timeout: float = None,
@@ -60,67 +68,62 @@ def run(
         file: io.TextIOWrapper,
     ) -> None:
         sentinel = "" if is_text else b""
-        writer = file.write if is_text else file.buffer.write
+        _file = file.write if is_text else file.buffer.write
 
         try:
-            for line in iter(stream.readline, sentinel):
+            for line in iter(stream.read, sentinel):
                 buffer.write(line)
                 if not capture_output:
-                    writer(line)
+                    _file(line)
                     file.flush()
         finally:
             stream.close()
 
-    with subprocess.Popen(*popenargs, **kwargs) as process:
-        try:
-            with ExitStack() as stack:
-                threads = [
-                    stack.enter_context(
-                        threading.Thread(
-                            target=stream_reader,
-                            args=(process.stdout, stdout_buffer, sys.stdout),
-                        )
-                    ),
-                    stack.enter_context(
-                        threading.Thread(
-                            target=stream_reader,
-                            args=(process.stderr, stderr_buffer, sys.stderr),
-                        )
-                    ),
-                ]
+    process = subprocess.Popen(*args, **kwargs)
 
-                for t in threads:
-                    t.start()
+    threads = [
+        threading.Thread(
+            target=stream_reader,
+            args=(process.stdout, stdout_buffer, sys.stdout),
+        ),
+        threading.Thread(
+            target=stream_reader,
+            args=(process.stderr, stderr_buffer, sys.stderr),
+        ),
+    ]
 
-                if input is not None:
-                    if isinstance(input, str) and is_text:
-                        input = input.encode(encoding)
-                    process.stdin.write(input)
-                    process.stdin.close()
+    for t in threads:
+        t.start()
 
-                process.wait(timeout)
+    if input is not None:
+        if isinstance(input, str) and is_text:
+            input = input.encode(encoding)
+        process.stdin.write(input)
+        process.stdin.close()
 
-        except subprocess.TimeoutExpired as exc:
-            process.kill()
-            exc.stdout, exc.stderr = process.communicate()
-            raise
-        except BaseException:
-            process.kill()
-            raise
-        finally:
-            for t in threads:
-                t.join()
+    try:
+        process.wait(timeout)
+    except subprocess.TimeoutExpired as e:
+        process.kill()
+        raise e
+    finally:
+        for t in threads:
+            t.join()
 
-        retcode = process.poll()
-        stdout = stdout_buffer.getvalue()
-        stderr = stderr_buffer.getvalue()
+    stdout_data = stdout_buffer.getvalue()
+    stderr_data = stderr_buffer.getvalue()
 
-        if check and retcode:
-            raise subprocess.CalledProcessError(
-                retcode,
-                process.args,
-                output=stdout,
-                stderr=stderr,
-            )
+    if check and process.returncode != 0:
+        raise subprocess.CalledProcessError(
+            process.returncode,
+            process.args,
+            output=stdout_data,
+            stderr=stderr_data,
+        )
 
-    return subprocess.CompletedProcess(process.args, retcode, stdout, stderr)
+    return subprocess.CompletedProcess(
+        args=process.args,
+        returncode=process.returncode,
+        stdout=stdout_data,
+        stderr=stderr_data,
+    )
