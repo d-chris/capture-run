@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from subprocess_run.run import run
+from subprocess_run import run
 
 
 def coverage() -> bool:

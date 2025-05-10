@@ -4,6 +4,7 @@ import io
 import subprocess
 import sys
 import threading
+from functools import wraps
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -71,6 +72,7 @@ def stream_reader_binary(
         stream.close()
 
 
+@wraps(subprocess.run)
 def run(
     *args: subprocess._CMD,
     input: str | None = None,
