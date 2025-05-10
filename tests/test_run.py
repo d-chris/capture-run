@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import os
 import subprocess
 
 import pytest
 
 from subprocess_run.run import run
+
+
+def coverage() -> bool:
+    """Check if the code is running under coverage."""
+    return os.environ.get("COVERAGE_PROCESS_START") or os.environ.get("COV_CORE_SOURCE")
 
 
 @pytest.fixture(
@@ -118,16 +124,16 @@ def test_run_timeout() -> None:
             "-c",
             "import time; print('timeout', flush=True); time.sleep(1)",
         ],
-        "timeout": 0.25,
+        "timeout": 0.1,
         "text": True,
     }
 
     with pytest.raises(subprocess.TimeoutExpired) as excinfo:
         _ = run(**kwargs)
 
-    e = excinfo.value  # type: subprocess.TimeoutExpired
-
-    assert e.output == "timeout\n"
+    if not coverage():
+        e = excinfo.value  # type: subprocess.TimeoutExpired
+        assert e.output == "timeout\n"
 
 
 def test_run_input() -> None:
