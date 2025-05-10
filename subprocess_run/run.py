@@ -32,6 +32,45 @@ class StreamIO:
             return io.StringIO(initial_value, newline)
 
 
+def stream_reader_text(
+    stream: io.BufferedReader,
+    buffer: io.StringIO,
+    file: io.TextIOWrapper,
+    /,
+    *,
+    capture_output: bool,
+    encoding: str,
+) -> None:
+    try:
+        for line in iter(stream.read, b""):
+            decoded_line = line.decode(encoding)
+            buffer.write(decoded_line)
+            if not capture_output:
+                file.write(decoded_line)
+                file.flush()
+    finally:
+        stream.close()
+
+
+def stream_reader_binary(
+    stream: io.BufferedReader,
+    buffer: io.BytesIO,
+    file: io.TextIOWrapper,
+    /,
+    *,
+    capture_output: bool,
+    **_: Any,
+) -> None:
+    try:
+        for line in iter(stream.read, b""):
+            buffer.write(line)
+            if not capture_output:
+                file.buffer.write(line)
+                file.flush()
+    finally:
+        stream.close()
+
+
 def run(
     *args: subprocess._CMD,
     input: str | None = None,
@@ -63,40 +102,24 @@ def run(
     stdout_buffer = StreamIO(text=is_text)
     stderr_buffer = StreamIO(text=is_text)
 
-    def stream_reader(
-        stream: io.BufferedReader,
-        buffer: io.BytesIO | io.StringIO,
-        file: io.TextIOWrapper,
-        encoding: str,
-        is_text: bool,
-    ) -> None:
-        sentinel = b""
-        try:
-            for line in iter(stream.read, sentinel):
-                if is_text:
-                    decoded_line = line.decode(encoding)
-                    buffer.write(decoded_line)
-                    if not capture_output:
-                        file.write(decoded_line)
-                        file.flush()
-                else:
-                    buffer.write(line)
-                    if not capture_output:
-                        file.buffer.write(line)
-                        file.flush()
-        finally:
-            stream.close()
+    thread_reader = stream_reader_text if is_text else stream_reader_binary
+    thread_kwargs = {
+        "capture_output": capture_output,
+        "encoding": encoding,
+    }
 
     process = subprocess.Popen(*args, **kwargs)
 
     threads = [
         threading.Thread(
-            target=stream_reader,
-            args=(process.stdout, stdout_buffer, sys.stdout, encoding, is_text),
+            target=thread_reader,
+            args=(process.stdout, stdout_buffer, sys.stdout),
+            kwargs=thread_kwargs,
         ),
         threading.Thread(
-            target=stream_reader,
-            args=(process.stderr, stderr_buffer, sys.stderr, encoding, is_text),
+            target=thread_reader,
+            args=(process.stderr, stderr_buffer, sys.stderr),
+            kwargs=thread_kwargs,
         ),
     ]
 
