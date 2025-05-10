@@ -102,13 +102,17 @@ def test_run_timeout():
         "args": [
             "python",
             "-c",
-            "import time; time.sleep(1)",
+            "import time; print('timeout'); time.sleep(1)",
         ],
         "timeout": 0.1,
+        "text": True,
     }
 
-    with pytest.raises(subprocess.TimeoutExpired):
+    with pytest.raises(subprocess.TimeoutExpired) as excinfo:
         _ = run(**kwargs)
+
+    e = excinfo.value
+    assert e.output == "timeout\n"
 
 
 def test_run_input():

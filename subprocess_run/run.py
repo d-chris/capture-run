@@ -136,8 +136,17 @@ def run(
         process.wait(timeout)
     except subprocess.TimeoutExpired as e:
         process.kill()
-        raise e
-    finally:
+
+        for t in threads:
+            t.join()
+
+        raise subprocess.TimeoutExpired(
+            cmd=e.cmd,
+            timeout=e.timeout,
+            output=stdout_buffer.getvalue(),
+            stderr=stderr_buffer.getvalue(),
+        ) from e
+    else:
         for t in threads:
             t.join()
 
