@@ -1,17 +1,17 @@
-# subprocess-run
+# capture-run
 
 A drop-in replacement for `subprocess.run` that captures stdout and stderr while also displaying output live in the console.
 
 ## Installation
 
 ```cmd
-pip install subprocess-run
+pip install capture-run
 ```
 
 ## Usage
 
 ```doctest
->>> from subprocess_run import run
+>>> from capture_run import run
 
 >>> run("echo $ bytes")
 $ bytes
