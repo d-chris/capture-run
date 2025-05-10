@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 
 import pytest
 
@@ -20,15 +21,15 @@ def coverage() -> bool:
         ["echo", "✔ succeeded", "&", "exit", "0"],
         ["echo", "\u2718 failed", "&", "exit", "1"],  # "✘"
     ],
-    ids=lambda x: " ".join(x),
+    ids=repr,
 )
 def commands(request: pytest.FixtureRequest) -> list[str]:
     return request.param
 
 
-@pytest.mark.parametrize("text", [True, False])
-@pytest.mark.parametrize("encoding", [None, "utf-8"])
-@pytest.mark.parametrize("capture_output", [True, False])
+@pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
+@pytest.mark.parametrize("encoding", [None, "utf-8"], ids=lambda x: f"enc={x}")
+@pytest.mark.parametrize("capture_output", [True, False], ids=lambda x: f"cap={x}")
 def test_run_shell(
     capfd: pytest.CaptureFixture,
     commands: list[str],
@@ -62,9 +63,9 @@ def test_run_shell(
         assert (b.stdout is not None) and (b.stderr is not None)
 
 
-@pytest.mark.parametrize("text", [True, False])
-@pytest.mark.parametrize("encoding", [None, "utf-8"])
-@pytest.mark.parametrize("capture_output", [True, False])
+@pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
+@pytest.mark.parametrize("encoding", [None, "utf-8"], ids=lambda x: f"enc={x}")
+@pytest.mark.parametrize("capture_output", [True, False], ids=lambda x: f"cap={x}")
 def test_run(
     capfd: pytest.CaptureFixture,
     commands: list[str],
@@ -152,3 +153,31 @@ def test_run_input() -> None:
     b = run(**kwargs)  # type: subprocess.CompletedProcess
 
     assert a.stdout == b.stdout == "ok\n"
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {
+            "input": "ok",
+            "stdin": sys.stdin,
+        },
+        {
+            "capture_output": True,
+            "stdout": sys.stdout,
+        },
+        {
+            "capture_output": True,
+            "stderr": sys.stderr,
+        },
+    ],
+    ids=[
+        "input+stdin",
+        "capture_output+stdout",
+        "capture_output+stderr",
+    ],
+)
+def test_run_valueerror(kwargs) -> None:
+
+    with pytest.raises(ValueError):
+        _ = run(["echo", "ok"], **kwargs)
