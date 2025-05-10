@@ -91,7 +91,7 @@ def run(
         )
 
     is_text = kwargs.get("text", False) or bool(kwargs.get("encoding", None))
-    encoding = kwargs.get("encoding", sys.getdefaultencoding())
+    encoding = kwargs.get("encoding", None) or sys.getdefaultencoding()
 
     # Always use binary mode for Popen
     kwargs["text"] = False
