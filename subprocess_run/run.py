@@ -53,11 +53,12 @@ def run(
 
     is_text = kwargs.get("text", False) or bool(kwargs.get("encoding", None))
     encoding = kwargs.get("encoding", sys.getdefaultencoding())
+
+    # Always use binary mode for Popen
+    kwargs["text"] = False
+    kwargs["encoding"] = None
     kwargs["stdout"] = subprocess.PIPE
     kwargs["stderr"] = subprocess.PIPE
-
-    if is_text:
-        kwargs["bufsize"] = 1
 
     stdout_buffer = StreamIO(text=is_text)
     stderr_buffer = StreamIO(text=is_text)
@@ -66,16 +67,23 @@ def run(
         stream: io.BufferedReader,
         buffer: io.BytesIO | io.StringIO,
         file: io.TextIOWrapper,
+        encoding: str,
+        is_text: bool,
     ) -> None:
-        sentinel = "" if is_text else b""
-        _file = file.write if is_text else file.buffer.write
-
+        sentinel = b""
         try:
             for line in iter(stream.read, sentinel):
-                buffer.write(line)
-                if not capture_output:
-                    _file(line)
-                    file.flush()
+                if is_text:
+                    decoded_line = line.decode(encoding)
+                    buffer.write(decoded_line)
+                    if not capture_output:
+                        file.write(decoded_line)
+                        file.flush()
+                else:
+                    buffer.write(line)
+                    if not capture_output:
+                        file.buffer.write(line)
+                        file.flush()
         finally:
             stream.close()
 
@@ -84,11 +92,11 @@ def run(
     threads = [
         threading.Thread(
             target=stream_reader,
-            args=(process.stdout, stdout_buffer, sys.stdout),
+            args=(process.stdout, stdout_buffer, sys.stdout, encoding, is_text),
         ),
         threading.Thread(
             target=stream_reader,
-            args=(process.stderr, stderr_buffer, sys.stderr),
+            args=(process.stderr, stderr_buffer, sys.stderr, encoding, is_text),
         ),
     ]
 
@@ -96,7 +104,7 @@ def run(
         t.start()
 
     if input is not None:
-        if isinstance(input, str) and is_text:
+        if isinstance(input, str):
             input = input.encode(encoding)
         process.stdin.write(input)
         process.stdin.close()
