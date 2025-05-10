@@ -155,8 +155,8 @@ def run(
 
     if check and process.returncode != 0:
         raise subprocess.CalledProcessError(
-            process.returncode,
-            process.args,
+            returncode=process.returncode,
+            cmd=process.args,
             output=stdout_data,
             stderr=stderr_data,
         )

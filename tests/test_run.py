@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import subprocess
 
 import pytest
@@ -14,14 +16,20 @@ from subprocess_run.run import run
     ],
     ids=lambda x: " ".join(x),
 )
-def commands(request):
+def commands(request: pytest.FixtureRequest) -> list[str]:
     return request.param
 
 
 @pytest.mark.parametrize("text", [True, False])
 @pytest.mark.parametrize("encoding", [None, "utf-8"])
 @pytest.mark.parametrize("capture_output", [True, False])
-def test_run_shell(capfd, commands, text, encoding, capture_output):
+def test_run_shell(
+    capfd: pytest.CaptureFixture,
+    commands: list[str],
+    text: bool,
+    encoding: str | None,
+    capture_output: bool,
+) -> None:
 
     kwargs = {
         "args": " ".join(commands),
@@ -51,7 +59,13 @@ def test_run_shell(capfd, commands, text, encoding, capture_output):
 @pytest.mark.parametrize("text", [True, False])
 @pytest.mark.parametrize("encoding", [None, "utf-8"])
 @pytest.mark.parametrize("capture_output", [True, False])
-def test_run(capfd, commands, text, encoding, capture_output):
+def test_run(
+    capfd: pytest.CaptureFixture,
+    commands: list[str],
+    text: bool,
+    encoding: str | None,
+    capture_output: bool,
+) -> None:
 
     kwargs = {
         "args": commands,
@@ -78,7 +92,7 @@ def test_run(capfd, commands, text, encoding, capture_output):
         assert (b.stdout is not None) and (b.stderr is not None)
 
 
-def test_run_check():
+def test_run_check() -> None:
     kwargs = {
         "args": [
             "python",
@@ -92,30 +106,31 @@ def test_run_check():
     with pytest.raises(subprocess.CalledProcessError) as excinfo:
         _ = run(**kwargs)
 
-    e = excinfo.value
+    e = excinfo.value  # type: subprocess.CalledProcessError
 
     assert e.stderr == "nok\n"
 
 
-def test_run_timeout():
+def test_run_timeout() -> None:
     kwargs = {
         "args": [
             "python",
             "-c",
-            "import time; print('timeout'); time.sleep(1)",
+            "import time; print('timeout', flush=True); time.sleep(1)",
         ],
-        "timeout": 0.1,
+        "timeout": 0.25,
         "text": True,
     }
 
     with pytest.raises(subprocess.TimeoutExpired) as excinfo:
         _ = run(**kwargs)
 
-    e = excinfo.value
+    e = excinfo.value  # type: subprocess.TimeoutExpired
+
     assert e.output == "timeout\n"
 
 
-def test_run_input():
+def test_run_input() -> None:
     kwargs = {
         "args": [
             "python",
