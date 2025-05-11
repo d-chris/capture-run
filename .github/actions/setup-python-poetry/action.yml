@@ -15,15 +15,18 @@ inputs:
     default: "false"
 runs:
   using: "composite"
-  env:
-    POETRY_VIRTUALENVS_IN_PROJECT: "true"
   steps:
     - name: Set up Python ${{ inputs.python_version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python_version }}
     - name: Install poetry ${{ inputs.poetry_version }}
+      shell: bash
       run: pipx install poetry==${{ inputs.poetry_version }} --python ${{ inputs.python_version }}
+    - name: Configure poetry
+      shell: bash
+      if: ${{ inputs.cache == 'true' }}
+      run: poetry config virtualenvs.in-project true
     - name: Cache .venv
       if: ${{ inputs.cache == 'true' }}
       uses: actions/cache@v4
@@ -33,4 +36,5 @@ runs:
         restore-keys: |
           venv-${{ runner.os }}-${{ inputs.python_version }}-
     - name: Install dependencies
+      shell: bash
       run: poetry install --only main,test
