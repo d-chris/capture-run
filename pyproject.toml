@@ -4,6 +4,7 @@ requires = [ "poetry-core" ]
 
 [tool.poetry]
 name = "capture-run"
+packages = [ { include = "capture" } ]
 version = "0.0.0"
 description = "A drop-in replacement for `subprocess.run` that captures stdout and stderr while also displaying output live in the console."
 authors = [ "Christoph Dörrer <d-chris@web.de>" ]

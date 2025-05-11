@@ -11,7 +11,7 @@ pip install capture-run
 ## Usage
 
 ```doctest
->>> from capture_run import run
+>>> from capture import run
 
 >>> run("echo $ bytes")
 $ bytes
