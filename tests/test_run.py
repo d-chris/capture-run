@@ -17,14 +17,27 @@ def coverage() -> bool:
 @pytest.fixture(
     params=[
         ["echo", "ok"],
-        ["echo", "nok", "&", "exit", "1"],
-        ["echo", "✔ succeeded", "&", "exit", "0"],
-        ["echo", "\u2718 failed", "&", "exit", "1"],  # "✘"
+        ["echo", "nok", ";", "exit", "1"],
+        pytest.param(
+            ["echo", "☺ bright", ";", "exit", "0"],
+            marks=pytest.mark.xfail(
+                sys.platform == "win32", reason="cp850 not guaranteed supported on Win"
+            ),
+        ),
+        pytest.param(
+            ["echo", "\u263b dark", ";", "exit", "1"],  # "☻"
+            marks=pytest.mark.xfail(
+                sys.platform == "win32", reason="cp850 not guaranteed supported on Win"
+            ),
+        ),
     ],
     ids=repr,
 )
 def commands(request: pytest.FixtureRequest) -> list[str]:
-    return request.param
+    if sys.platform == "win32":
+        return ["&" if x == ";" else x for x in request.param]
+    else:
+        return request.param
 
 
 @pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
