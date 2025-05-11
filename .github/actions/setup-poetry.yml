@@ -1,0 +1,36 @@
+name: Setup Python and Poetry
+description: Set up Python and Poetry with specified versions with optional caching
+inputs:
+  python_version:
+    description: Python version to use
+    required: false
+    default: "3.13"
+  poetry_version:
+    description: Poetry version to use
+    required: false
+    default: "1.8.5"
+  cache:
+    description: Enable caching of the Poetry virtual environment
+    required: false
+    default: "false"
+runs:
+  using: "composite"
+  env:
+    POETRY_VIRTUALENVS_IN_PROJECT: "true"
+  steps:
+    - name: Set up Python ${{ inputs.python_version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+    - name: Install poetry ${{ inputs.poetry_version }}
+      run: pipx install poetry==${{ inputs.poetry_version }} --python ${{ inputs.python_version }}
+    - name: Cache .venv
+      if: ${{ inputs.cache == 'true' }}
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ inputs.python_version }}-${{ hashFiles('poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-${{ inputs.python_version }}-
+    - name: Install dependencies
+      run: poetry install --only main,test
