@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from capture_run import run
+from capture import run
 
 
 def coverage() -> bool:
