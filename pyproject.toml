@@ -9,6 +9,20 @@ description = "A drop-in replacement for `subprocess.run` that captures stdout a
 authors = [ "Christoph Dörrer <d-chris@web.de>" ]
 readme = "README.md"
 license = "MIT"
+keywords = [ "subprocess", "run", "popen", "capture_output" ]
+classifiers = [
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+[tool.poetry.urls]
+repository = "https://github.com/d-chris/capture-run"
 
 [tool.poetry.dependencies]
 python = "^3.8"
