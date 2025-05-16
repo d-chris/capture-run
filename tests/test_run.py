@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from capture import run
+from capture.asyncron import run
 
 
 def coverage() -> bool:
