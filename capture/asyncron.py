@@ -23,7 +23,7 @@ def default_encoding(
     if os.name == "nt" and executable is None:
         return f"cp{ctypes.windll.kernel32.GetConsoleOutputCP()}"
     else:
-        return locale.getencoding()
+        return locale.getpreferredencoding(False)
 
 
 def default_shell(
