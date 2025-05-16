@@ -77,6 +77,8 @@ async def asyncio_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         stdout = kwargs.pop("stdout", sys.stdout)
         stderr = kwargs.pop("stderr", sys.stderr)
 
+    _ = kwargs.pop("input", None)
+
     async def reader(
         stream: asyncio.StreamReader,
         buf: io.StringIO | io.BytesIO,
