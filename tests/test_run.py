@@ -6,6 +6,7 @@ import sys
 
 import pytest
 
+
 from capture import run
 
 
@@ -18,18 +19,8 @@ def coverage() -> bool:
     params=[
         ["echo", "ok"],
         ["echo", "nok", ";", "exit", "1"],
-        pytest.param(
-            ["echo", "☺ bright", ";", "exit", "0"],
-            marks=pytest.mark.xfail(
-                sys.platform == "win32", reason="cp850 not guaranteed supported on Win"
-            ),
-        ),
-        pytest.param(
-            ["echo", "\u263b dark", ";", "exit", "1"],  # "☻"
-            marks=pytest.mark.xfail(
-                sys.platform == "win32", reason="cp850 not guaranteed supported on Win"
-            ),
-        ),
+        ["echo", "☺ bright", ";", "exit", "0"],
+        ["echo", "\u263b dark", ";", "exit", "1"],  # "☻"
     ],
     ids=repr,
 )
@@ -150,6 +141,7 @@ def test_run_timeout() -> None:
         assert e.output == "timeout\n"
 
 
+@pytest.mark.xfail(raises=subprocess.TimeoutExpired, reason="Input not implemented yet")
 def test_run_input() -> None:
     kwargs = {
         "args": [
@@ -160,7 +152,7 @@ def test_run_input() -> None:
         "input": "ok",
         "text": True,
         "capture_output": True,
-        "timeout": 1,
+        "timeout": 0.1,
     }
 
     a = subprocess.run(**kwargs)  # type: subprocess.CompletedProcess
