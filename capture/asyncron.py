@@ -77,13 +77,11 @@ async def asyncio_run(
     is_text = text or encoding is not None
     encoding = encoding or default_encoding()
 
-    _ = kwargs.pop("bufsize", -1)
-
     if capture_output:
         stdout = stderr = devnull = open(os.devnull, "w")
     else:
-        stdout = kwargs.pop("stdout", sys.stdout)
-        stderr = kwargs.pop("stderr", sys.stderr)
+        stdout = sys.stdout
+        stderr = sys.stderr
 
     async def reader(
         stream: asyncio.StreamReader,
@@ -203,13 +201,16 @@ def run(
     capture_output: bool = False,
     timeout: float | None = None,
     check: bool = False,
+    stdin: None = None,
+    stdout: None = None,
+    stderr: None = None,
     **kwargs,
 ) -> subprocess.CompletedProcess:
 
-    if kwargs.get("stdin") is not None:
+    if stdin is not None:
         raise ValueError("'stdin' is not supported use 'input' argument.")
 
-    if kwargs.get("stdout") is not None or kwargs.get("stderr") is not None:
+    if stdout is not None or stderr is not None:
         raise ValueError(
             "'stdout' and 'stderr' are not supported, output is always captured."
         )
