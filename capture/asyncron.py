@@ -191,16 +191,30 @@ async def asyncio_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
 
 
 @functools.wraps(subprocess.run)
-def run(args, **kwargs) -> subprocess.CompletedProcess:
+def run(
+    args: subprocess._CMD,
+    input: str | None = None,
+    capture_output: bool = False,
+    timeout: float | None = None,
+    check: bool = False,
+    **kwargs,
+) -> subprocess.CompletedProcess:
 
-    if kwargs.get("input") is not None:
-        if kwargs.get("stdin") is not None:
-            raise ValueError("stdin and input arguments may not both be used.")
-        kwargs["stdin"] = subprocess.PIPE
+    if kwargs.get("stdin") is not None:
+        raise ValueError("'stdin' is not supported use 'input' argument.")
 
-    if kwargs.get("capture_output") and ("stdout" in kwargs or "stderr" in kwargs):
+    if kwargs.get("stdout") is not None or kwargs.get("stderr") is not None:
         raise ValueError(
-            "stdout and stderr arguments may not be used with capture_output."
+            "'stdout' and 'stderr' are not supported, output is always captured."
         )
 
-    return asyncio.run(asyncio_run(args, **kwargs))
+    return asyncio.run(
+        asyncio_run(
+            args,
+            input=input,
+            capture_output=capture_output,
+            timeout=timeout,
+            check=check,
+            **kwargs,
+        )
+    )
