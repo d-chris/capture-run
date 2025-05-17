@@ -52,32 +52,38 @@ class DecodeError(UnicodeDecodeError):
     ) -> None:
         super().__init__(encoding, object, start, end, reason)
 
-        self.buffer = buffer
+        self._buffer = buffer
+
+    @property
+    def buffer(self) -> io.StringIO | io.BytesIO:
+        return self._buffer
 
 
-async def asyncio_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+async def asyncio_run(
+    args: subprocess._CMD,
+    /,
+    input: str | None = None,
+    capture_output: bool = False,
+    timeout: float | None = None,
+    check: bool = False,
+    *,
+    shell: bool = False,
+    text: bool = False,
+    encoding: str | None = None,
+    **kwargs,
+) -> subprocess.CompletedProcess:
     # spawn the subprocess with separate pipes
-
-    text = kwargs.pop("text", False)
-    encoding = kwargs.pop("encoding", None)
 
     is_text = text or encoding is not None
     encoding = encoding or default_encoding()
 
-    shell = kwargs.pop("shell", False)
     _ = kwargs.pop("bufsize", -1)
-
-    timeout = kwargs.pop("timeout", None)
-    capture_output = kwargs.pop("capture_output", False)
-    check = kwargs.pop("check", False)
 
     if capture_output:
         stdout = stderr = devnull = open(os.devnull, "w")
     else:
         stdout = kwargs.pop("stdout", sys.stdout)
         stderr = kwargs.pop("stderr", sys.stderr)
-
-    _ = kwargs.pop("input", None)
 
     async def reader(
         stream: asyncio.StreamReader,
@@ -121,17 +127,17 @@ async def asyncio_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
 
     if shell:
         proc = await asyncio.create_subprocess_shell(
-            cmd,
+            args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             **kwargs,
         )
     else:
-        if isinstance(cmd, str):
-            cmd = cmd.split(" ", maxsplit=1)
+        if isinstance(args, str):
+            args = args.split(" ", maxsplit=1)
 
         proc = await asyncio.create_subprocess_exec(
-            *cmd,
+            *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             **kwargs,
@@ -168,7 +174,7 @@ async def asyncio_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
 
     if timeout:
         raise subprocess.TimeoutExpired(
-            cmd,
+            args,
             float(timeout),
             output=stdout,
             stderr=stderr,
@@ -177,13 +183,13 @@ async def asyncio_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
     if check and proc.returncode != 0:
         raise subprocess.CalledProcessError(
             returncode=proc.returncode,
-            cmd=cmd,
+            cmd=args,
             output=stdout,
             stderr=stderr,
         )
 
     return subprocess.CompletedProcess(
-        args=cmd,
+        args=args,
         returncode=proc.returncode,
         stdout=stdout,
         stderr=stderr,
