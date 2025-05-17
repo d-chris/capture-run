@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 from typing import Any
+from typing import Literal
 
 
 def default_encoding(
@@ -197,13 +198,14 @@ async def asyncio_run(
 @functools.wraps(subprocess.run)
 def run(
     args: subprocess._CMD,
+    *,
     input: str | None = None,
     capture_output: bool = False,
     timeout: float | None = None,
     check: bool = False,
-    stdin: None = None,
-    stdout: None = None,
-    stderr: None = None,
+    stdin: Literal[None] = None,
+    stdout: Literal[None] = None,
+    stderr: Literal[None] = None,
     **kwargs,
 ) -> subprocess.CompletedProcess:
 
