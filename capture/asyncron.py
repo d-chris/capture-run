@@ -206,16 +206,24 @@ def run(
     stdin: Literal[None] = None,
     stdout: Literal[None] = None,
     stderr: Literal[None] = None,
+    bufsize: Literal[0] = 0,
+    universal_newlines: Literal[False] = False,
     **kwargs,
 ) -> subprocess.CompletedProcess:
 
     if stdin is not None:
-        raise ValueError("'stdin' is not supported use 'input' argument.")
+        raise ValueError("'stdin' is not supported, use 'input' argument.")
 
     if stdout is not None or stderr is not None:
         raise ValueError(
-            "'stdout' and 'stderr' are not supported, output is always captured."
+            "'stdout' and 'stderr' are not supported, use 'capture_output' argument."
         )
+
+    if universal_newlines is not False:
+        raise ValueError("'universal_newlines' is not supported, use 'text' instead.")
+
+    if bufsize != 0:
+        raise ValueError("'bufsize' is not supported.")
 
     return asyncio.run(
         asyncio_run(

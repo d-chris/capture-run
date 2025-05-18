@@ -176,11 +176,20 @@ def test_run_input() -> None:
             "capture_output": True,
             "stderr": sys.stderr,
         },
+        {
+            "universal_newlines": True,
+            "text": False,
+        },
+        {
+            "bufsize": -1,
+        },
     ],
     ids=[
         "input+stdin",
         "capture_output+stdout",
         "capture_output+stderr",
+        "universal_newlines+text",
+        "bufsize",
     ],
 )
 def test_run_valueerror(kwargs) -> None:
