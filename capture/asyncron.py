@@ -121,12 +121,28 @@ async def asyncio_run(
                 buffer=buf,
             )
 
+    async def writer(
+        stream: asyncio.StreamWriter,
+        input: str | bytes | None,
+        encoding: str | None,
+    ) -> None:
+
+        if input is not None:
+            if isinstance(input, str):
+                input = input.encode(encoding)
+            stream.write(input)
+            await stream.drain()
+
+        stream.close()
+        await stream.wait_closed()
+
     stdout_buf = io.StringIO(newline=None) if is_text else io.BytesIO()
     stderr_buf = io.StringIO(newline=None) if is_text else io.BytesIO()
 
     if shell:
         proc = await asyncio.create_subprocess_shell(
             args,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             **kwargs,
@@ -137,6 +153,7 @@ async def asyncio_run(
 
         proc = await asyncio.create_subprocess_exec(
             *args,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             **kwargs,
@@ -145,6 +162,7 @@ async def asyncio_run(
     tasks = [
         asyncio.create_task(reader(proc.stdout, stdout_buf, stdout)),
         asyncio.create_task(reader(proc.stderr, stderr_buf, stderr)),
+        asyncio.create_task(writer(proc.stdin, input, encoding)),
     ]
 
     try:

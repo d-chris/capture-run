@@ -141,7 +141,6 @@ def test_run_timeout() -> None:
         assert e.output == "timeout\n"
 
 
-@pytest.mark.xfail(reason="Input not implemented yet")
 def test_run_input() -> None:
     kwargs = {
         "args": [
