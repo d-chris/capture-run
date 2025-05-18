@@ -46,8 +46,7 @@ testpaths = "tests"
 addopts = [ "--color=yes" ]
 
 [tool.coverage.run]
-sigterm = true
-omit = [ "*/tests/*" ]
+omit = [ "*/tests/*", "*/legacy.py" ]
 
 [tool.coverage.report]
 exclude_lines = [ "^if TYPE_CHECKING:" ]

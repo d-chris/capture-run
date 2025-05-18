@@ -6,7 +6,6 @@ import sys
 
 import pytest
 
-
 from capture import run
 
 
@@ -21,8 +20,15 @@ def coverage() -> bool:
         ["echo", "nok", ";", "exit", "1"],
         ["echo", "☺ bright", ";", "exit", "0"],
         ["echo", "\u263b dark", ";", "exit", "1"],  # "☻"
+        ["echo", "🚀"],
     ],
-    ids=repr,
+    ids=[
+        "echo=ok",
+        "echo=nok",
+        "echo=bright",
+        "echo=dark",
+        "echo=rocket",
+    ],
 )
 def commands(request: pytest.FixtureRequest) -> list[str]:
     if sys.platform == "win32":
@@ -32,19 +38,21 @@ def commands(request: pytest.FixtureRequest) -> list[str]:
 
 
 @pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
-@pytest.mark.parametrize("encoding", [None, "utf-8"], ids=lambda x: f"enc={x}")
+@pytest.mark.parametrize("encoding", [None, "utf-8", "ansi"], ids=lambda x: f"enc={x}")
 @pytest.mark.parametrize("capture_output", [True, False], ids=lambda x: f"cap={x}")
+@pytest.mark.parametrize("shell", [True, False], ids=lambda x: f"sh={x}")
 def test_run_shell(
     capfd: pytest.CaptureFixture,
     commands: list[str],
     text: bool,
     encoding: str | None,
     capture_output: bool,
+    shell: bool,
 ) -> None:
 
     kwargs = {
         "args": " ".join(commands),
-        "shell": True,
+        "shell": shell,
         "text": text,
         "capture_output": capture_output,
         "encoding": encoding,
@@ -195,3 +203,60 @@ def test_run_valueerror(kwargs) -> None:
 
     with pytest.raises(ValueError):
         _ = run(["echo", "ok"], **kwargs)
+
+
+def test_run_python(capfd, tmp_path) -> None:
+
+    script = tmp_path / "echo.py"
+    script.write_text("print('😊')\n", encoding="utf-8")
+
+    kwargs = {
+        "args": ["python", script],
+        # "encoding": "cp850",
+        "executable": sys.executable,
+        "capture_output": True,
+    }
+
+    a = subprocess.run(**kwargs)  # type: subprocess.CompletedProcess
+    asys = capfd.readouterr()
+
+    b = run(**kwargs)  # type: subprocess.CompletedProcess
+    bsys = capfd.readouterr()
+
+    assert asys.out == bsys.out
+    assert a.stdout == b.stdout
+    assert a.returncode == b.returncode
+
+
+@pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
+@pytest.mark.parametrize("encoding", [None, "utf-8", "ansi"], ids=lambda x: f"enc={x}")
+@pytest.mark.parametrize("capture_output", [False], ids=lambda x: f"cap={x}")
+def test_run_ping(
+    capfdbinary: pytest.CaptureFixture,
+    text: bool,
+    encoding: str | None,
+    capture_output: bool,
+) -> None:
+
+    kwargs = {
+        "args": "ping localhost -n 1" if os.name == "nt" else "ping -c 1 localhost",
+        "shell": True,
+        "capture_output": capture_output,
+        "encoding": encoding,
+    }
+
+    a = subprocess.run(**kwargs)  # type: subprocess.CompletedProcess
+    asys = capfdbinary.readouterr()
+
+    b = run(**kwargs)  # type: subprocess.CompletedProcess
+    bsys = capfdbinary.readouterr()
+
+    assert asys == bsys
+
+    assert (a.returncode == b.returncode) and (a.args == b.args)
+
+    if capture_output:
+        pass  # assert (a.stdout == b.stdout) and (a.stderr == b.stderr)
+    else:
+        assert (a.stdout is None) and (a.stderr is None)
+        assert (b.stdout is not None) and (b.stderr is not None)

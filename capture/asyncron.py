@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import ctypes
 import functools
 import io
@@ -9,7 +10,18 @@ import os
 import subprocess
 import sys
 from typing import Any
+from collections.abc import Generator
 from typing import Literal
+from collections.abc import Sequence
+
+
+@contextlib.contextmanager
+def arguments(args) -> Generator[Sequence[str]]:
+
+    if isinstance(args, str):
+        yield args.split(" ", maxsplit=1)
+    else:
+        yield args
 
 
 def default_encoding(
@@ -113,7 +125,7 @@ async def asyncio_run(
             else:
                 buf.write(chunk)
 
-            output.write(s)
+            output.write(chunk.decode())
             output.flush()
 
         if error is not None:
@@ -153,16 +165,14 @@ async def asyncio_run(
             **kwargs,
         )
     else:
-        if isinstance(args, str):
-            args = args.split(" ", maxsplit=1)
-
-        proc = await asyncio.create_subprocess_exec(
-            *args,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            **kwargs,
-        )
+        with arguments(args) as a:
+            proc = await asyncio.create_subprocess_exec(
+                *a,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                **kwargs,
+            )
 
     tasks = [
         asyncio.create_task(reader(proc.stdout, stdout_buf, stdout)),
