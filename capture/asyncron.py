@@ -31,6 +31,11 @@ def default_shell(
     executable: str | os.PathLike | None = None,
     **_,
 ) -> str | os.PathLike:
+    """
+    Return the default shell for the platform. If an executable is specified, it is
+    returned.
+    """
+
     if executable is not None:
         return executable
 
@@ -228,6 +233,11 @@ def run(
     universal_newlines: Literal[False] = False,
     **kwargs,
 ) -> subprocess.CompletedProcess:
+    """
+    Run a command with the given arguments and return a CompletedProcess instance.
+    This function is a wrapper around asyncio.create_subprocess_exec and
+    asyncio.create_subprocess_shell.
+    """
 
     if stdin is not None:
         raise ValueError("'stdin' is not supported, use 'input' argument.")

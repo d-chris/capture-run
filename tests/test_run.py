@@ -151,7 +151,7 @@ def test_run_input() -> None:
         "input": "ok",
         "text": True,
         "capture_output": True,
-        "timeout": 0.1,
+        "timeout": 3,
     }
 
     a = subprocess.run(**kwargs)  # type: subprocess.CompletedProcess

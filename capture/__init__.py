@@ -1,4 +1,16 @@
-from subprocess import *  # noqa: F401, F403
-from subprocess import __all__  # noqa: F401
+from subprocess import CalledProcessError
+from subprocess import CompletedProcess
+from subprocess import TimeoutExpired
 
-from capture.asyncron import run  # noqa: F401
+from capture.asyncron import default_encoding as encoding
+from capture.asyncron import default_shell as shell
+from capture.asyncron import run
+
+__all__ = [
+    "run",
+    "encoding",
+    "shell",
+    "CompletedProcess",
+    "CalledProcessError",
+    "TimeoutExpired",
+]
