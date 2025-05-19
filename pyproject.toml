@@ -44,6 +44,7 @@ force_single_line = true
 minversion = "6.0"
 testpaths = "tests"
 addopts = [ "--color=yes" ]
+filterwarnings = [ "ignore::pytest.PytestUnhandledThreadExceptionWarning" ]
 
 [tool.coverage.run]
 omit = [ "*/tests/*", "*/legacy.py" ]

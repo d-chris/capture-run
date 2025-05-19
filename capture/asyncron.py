@@ -54,6 +54,18 @@ def default_shell(
         return "/bin/sh"
 
 
+def getvalue(buffer: io.StringIO | io.BytesIO) -> str | bytes | None:
+    """
+    Read the buffer and return the contents as a string or None if buffer was closed due
+    an DecodeError.
+    """
+
+    try:
+        return buffer.getvalue()
+    except ValueError:
+        return None
+
+
 class DecodeError(UnicodeDecodeError):
     def __init__(
         self,
@@ -104,15 +116,34 @@ async def asyncio_run(
         output: io.TextIOWrapper,
     ) -> None:
 
+        error: t.Optional[DecodeError] = None
+
         while chunk := await stream.readline():
 
             if is_text:
-                buf.write(chunk.decode(encoding, errors="replace"))
+                try:
+                    s = chunk.decode(encoding, errors="strict")
+                except UnicodeDecodeError as e:
+                    s = chunk.decode(encoding, errors="replace")
+                    if error is None:
+                        error = e
+                finally:
+                    buf.write(s)
             else:
                 buf.write(chunk)
 
             output.buffer.write(chunk)
             output.buffer.flush()
+
+        if error:
+            raise DecodeError(
+                encoding,
+                error.object,
+                error.start,
+                error.end,
+                error.reason,
+                buf,
+            )
 
     async def writer(
         stream: asyncio.StreamWriter,
@@ -160,17 +191,21 @@ async def asyncio_run(
         await asyncio.wait_for(proc.wait(), timeout=timeout)
     except asyncio.TimeoutError:
         proc.kill()
-        await asyncio.gather(proc.wait(), *tasks, return_exceptions=True)
+        results = await asyncio.gather(proc.wait(), *tasks, return_exceptions=True)
     else:
         timeout = None
-        await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
     finally:
         if capture_output:
             devnull.close()
 
-        stdout = stdout_buf.getvalue()
-        stderr = stderr_buf.getvalue()
+        for result in results:
+            if isinstance(result, DecodeError):
+                result.buffer.close()
+
+        stdout = getvalue(stdout_buf)
+        stderr = getvalue(stderr_buf)
 
     if timeout:
         raise subprocess.TimeoutExpired(

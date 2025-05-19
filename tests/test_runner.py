@@ -42,6 +42,7 @@ def test_run_shell(
     runner(**kwargs)
 
 
+@p.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
 @p.mark.parametrize(
     "args",
     [
@@ -51,7 +52,7 @@ def test_run_shell(
     ],
     ids=lambda x: x.split()[0],
 )
-def test_run_tools(runner: t.Callable, args: str) -> None:
+def test_run_tools(runner: t.Callable, args: str, text: bool) -> None:
 
     executable = shutil.which(args.split()[0])
 
@@ -61,7 +62,7 @@ def test_run_tools(runner: t.Callable, args: str) -> None:
     kwargs = {
         "args": args,
         "shell": True,
-        "executable": executable,
+        "text": text,
     }
 
     runner(**kwargs)
