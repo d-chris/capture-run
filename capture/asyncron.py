@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import ctypes
 import functools
 import io
 import locale
 import os
 import subprocess
 import sys
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from collections.abc import Sequence
+
 from typing import Any
-from collections.abc import Generator
 from typing import Literal
-from collections.abc import Sequence
 
 
 @contextlib.contextmanager
@@ -33,10 +36,7 @@ def default_encoding(
     encoding for the platforms is returned.
     """
 
-    if os.name == "nt" and executable is None:
-        return f"cp{ctypes.windll.kernel32.GetConsoleOutputCP()}"
-    else:
-        return locale.getpreferredencoding(False)
+    return locale.getpreferredencoding(False)
 
 
 def default_shell(
@@ -96,7 +96,7 @@ async def asyncio_run(
     encoding = encoding or default_encoding()
 
     if capture_output:
-        stdout = stderr = devnull = open(os.devnull, "w")
+        stdout = stderr = devnull = open(os.devnull, "w", encoding=encoding)
     else:
         stdout = sys.stdout
         stderr = sys.stderr
@@ -106,37 +106,19 @@ async def asyncio_run(
         buf: io.StringIO | io.BytesIO,
         output: io.TextIOBase,
     ) -> None:
-        error: UnicodeDecodeError | None = None
 
         while True:
             chunk = await stream.readline()
             if not chunk:
                 break
 
-            try:
-                s = chunk.decode(encoding, errors="strict" if text else "ignore")
-            except UnicodeDecodeError as e:
-                s = chunk.decode(default_encoding(), errors="replace")
-                if error is None:
-                    error = e
-
             if is_text:
-                buf.write(s)
+                buf.write(chunk.decode(encoding, errors="replace"))
             else:
                 buf.write(chunk)
 
-            output.write(chunk.decode())
+            output.write(chunk.decode("utf-8", errors="replace"))
             output.flush()
-
-        if error is not None:
-            raise DecodeError(
-                encoding=error.encoding,
-                object=error.object,
-                start=error.start,
-                end=error.end,
-                reason=error.reason,
-                buffer=buf,
-            )
 
     async def writer(
         stream: asyncio.StreamWriter,
@@ -184,25 +166,17 @@ async def asyncio_run(
         await asyncio.wait_for(proc.wait(), timeout=timeout)
     except asyncio.TimeoutError:
         proc.kill()
-        results = await asyncio.gather(proc.wait(), *tasks, return_exceptions=True)
+        await asyncio.gather(proc.wait(), *tasks, return_exceptions=True)
     else:
         timeout = None
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     finally:
         if capture_output:
             devnull.close()
 
-        for result in results:
-            if isinstance(result, DecodeError):
-                result.buffer.close()
-
-        try:
-            stdout = stdout_buf.getvalue()
-            stderr = stderr_buf.getvalue()
-        except ValueError:
-            stdout = None
-            stderr = None
+        stdout = stdout_buf.getvalue()
+        stderr = stderr_buf.getvalue()
 
     if timeout:
         raise subprocess.TimeoutExpired(

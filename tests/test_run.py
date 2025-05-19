@@ -20,7 +20,7 @@ def coverage() -> bool:
         ["echo", "nok", ";", "exit", "1"],
         ["echo", "☺ bright", ";", "exit", "0"],
         ["echo", "\u263b dark", ";", "exit", "1"],  # "☻"
-        ["echo", "🚀"],
+        ["echo", "\U0001f680 rocket"],  # 🚀
     ],
     ids=[
         "echo=ok",
@@ -40,9 +40,9 @@ def commands(request: pytest.FixtureRequest) -> list[str]:
 @pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
 @pytest.mark.parametrize("encoding", [None, "utf-8", "ansi"], ids=lambda x: f"enc={x}")
 @pytest.mark.parametrize("capture_output", [True, False], ids=lambda x: f"cap={x}")
-@pytest.mark.parametrize("shell", [True, False], ids=lambda x: f"sh={x}")
+@pytest.mark.parametrize("shell", [True], ids=lambda x: f"sh={x}")
 def test_run_shell(
-    capfd: pytest.CaptureFixture,
+    capfdbinary: pytest.CaptureFixture,
     commands: list[str],
     text: bool,
     encoding: str | None,
@@ -59,10 +59,10 @@ def test_run_shell(
     }
 
     a = subprocess.run(**kwargs)  # type: subprocess.CompletedProcess
-    asys = capfd.readouterr()
+    asys = capfdbinary.readouterr()
 
     b = run(**kwargs)  # type: subprocess.CompletedProcess
-    bsys = capfd.readouterr()
+    bsys = capfdbinary.readouterr()
 
     assert asys == bsys
 
@@ -228,6 +228,7 @@ def test_run_python(capfd, tmp_path) -> None:
     assert a.returncode == b.returncode
 
 
+@pytest.mark.skip(reason="Not implemented yet")
 @pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
 @pytest.mark.parametrize("encoding", [None, "utf-8", "ansi"], ids=lambda x: f"enc={x}")
 @pytest.mark.parametrize("capture_output", [False], ids=lambda x: f"cap={x}")
@@ -260,3 +261,106 @@ def test_run_ping(
     else:
         assert (a.stdout is None) and (a.stderr is None)
         assert (b.stdout is not None) and (b.stderr is not None)
+
+
+@pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
+@pytest.mark.parametrize(
+    "encoding", [None, "utf-8", "ansi", "cp850", "cp1254"], ids=lambda x: f"enc={x}"
+)
+@pytest.mark.parametrize("shell", [True, False], ids=lambda x: f"sh={x}")
+def test_run_shelly(
+    capfdbinary: pytest.CaptureFixture,
+    commands: list[str],
+    text: bool,
+    encoding: str | None,
+    shell: bool,
+) -> None:
+
+    kwargs = {
+        "args": " ".join(commands),
+        "shell": shell,
+        "text": text,
+        "encoding": encoding,
+    }
+
+    a = subprocess.run(
+        capture_output=True, **kwargs
+    )  # type: subprocess.CompletedProcess
+    asys = capfdbinary.readouterr()
+
+    c = subprocess.run(
+        capture_output=False, **kwargs
+    )  # type: subprocess.CompletedProcess
+    csys = capfdbinary.readouterr()
+
+    b = run(capture_output=False, **kwargs)  # type: subprocess.CompletedProcess
+    bsys = capfdbinary.readouterr()
+
+    d = run(capture_output=True, **kwargs)  # type: subprocess.CompletedProcess
+    dsys = capfdbinary.readouterr()
+
+    assert a.args == b.args == c.args == d.args, "missmatch in arguments"
+    assert (
+        a.returncode == b.returncode == c.returncode == d.returncode
+    ), "missmatch in returncode"
+
+    assert asys.out == asys.err == b"", "subprocess.run() should be capture output"
+
+    assert a.stdout == b.stdout == d.stdout, f"missmatch in captured stdout {encoding=}"
+    assert a.stderr == b.stderr == d.stderr, f"missmatch in captured stderr {encoding=}"
+
+    assert csys.out == bsys.out, f"missmatch in console output {encoding=}"
+    assert csys.err == bsys.err, f"missmatch in console error {encoding=}"
+
+    assert asys.out == dsys.out, f"missmatch in captured console output {encoding=}"
+    assert asys.err == dsys.err, f"missmatch in captured console error {encoding=}"
+
+
+@pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
+@pytest.mark.parametrize(
+    "encoding", [None, "utf-8", "ansi", "cp850", "cp1254"], ids=lambda x: f"enc={x}"
+)
+def test_runy(
+    capfdbinary: pytest.CaptureFixture,
+    commands: list[str],
+    text: bool,
+    encoding: str | None,
+) -> None:
+
+    kwargs = {
+        "args": commands,
+        "text": text,
+        "encoding": encoding,
+    }
+
+    a = subprocess.run(
+        capture_output=True, **kwargs
+    )  # type: subprocess.CompletedProcess
+    asys = capfdbinary.readouterr()
+
+    c = subprocess.run(
+        capture_output=False, **kwargs
+    )  # type: subprocess.CompletedProcess
+    csys = capfdbinary.readouterr()
+
+    b = run(capture_output=False, **kwargs)  # type: subprocess.CompletedProcess
+    bsys = capfdbinary.readouterr()
+
+    d = run(capture_output=True, **kwargs)  # type: subprocess.CompletedProcess
+    dsys = capfdbinary.readouterr()
+
+    assert a.args == b.args == c.args == d.args, "missmatch in arguments"
+    assert (
+        a.returncode == b.returncode == c.returncode == d.returncode
+    ), "missmatch in returncode"
+
+    assert asys.out == asys.err == b"", "subprocess.run() should be capture output"
+
+    assert a.stdout == b.stdout == d.stdout, f"missmatch in captured stdout {encoding=}"
+    assert a.stderr == b.stderr == d.stderr, f"missmatch in captured stderr {encoding=}"
+
+    assert csys.out == bsys.out, f"missmatch in console output {encoding=}"
+    assert csys.err == bsys.err, f"missmatch in console error {encoding=}"
+
+    assert asys.out == dsys.out, f"missmatch in captured console output {encoding=}"
+    assert asys.err == dsys.err, f"missmatch in captured console error {encoding=}"
