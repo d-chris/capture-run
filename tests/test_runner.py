@@ -1,4 +1,5 @@
 import os
+import shutil
 import typing as t
 
 import pytest as p
@@ -41,11 +42,26 @@ def test_run_shell(
     runner(**kwargs)
 
 
-def test_run_ping(runner: t.Callable) -> None:
+@p.mark.parametrize(
+    "args",
+    [
+        "ping localhost -n 1" if os.name == "nt" else "ping -c 1 localhost",
+        "python --version",
+        "git --version",
+    ],
+    ids=lambda x: x.split()[0],
+)
+def test_run_tools(runner: t.Callable, args: str) -> None:
+
+    executable = shutil.which(args.split()[0])
+
+    if executable is None:
+        p.skip(f"tool not found: {args}")
 
     kwargs = {
-        "args": "ping localhost -n 1" if os.name == "nt" else "ping -c 1 localhost",
+        "args": args,
         "shell": True,
+        "executable": executable,
     }
 
     runner(**kwargs)
