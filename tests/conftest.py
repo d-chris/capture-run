@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import subprocess
 import sys
+import typing as t
 
 import pytest as p
+
+import capture
 
 
 @p.fixture(
@@ -35,3 +39,57 @@ def commands(request: p.FixtureRequest) -> list[str]:
         return ["&" if x == ";" else x for x in request.param]
     else:
         return request.param
+
+
+@p.fixture()
+def runner(capfdbinary: p.CaptureFixture) -> t.Callable:
+    """
+    Returns a function which compares subprocess.run() and capture.run() output and
+    return values.
+    """
+
+    def run(**kwargs):
+        encoding = kwargs.get("encoding", None)
+        _ = kwargs.pop("capture_output", None)
+
+        sc = subprocess.run(
+            capture_output=True, **kwargs
+        )  # type: subprocess.CompletedProcess
+        scap = capfdbinary.readouterr()
+
+        s = subprocess.run(
+            capture_output=False, **kwargs
+        )  # type: subprocess.CompletedProcess
+        ssys = capfdbinary.readouterr()
+
+        c = capture.run(
+            capture_output=False, **kwargs
+        )  # type: subprocess.CompletedProcess
+        csys = capfdbinary.readouterr()
+
+        cc = capture.run(
+            capture_output=True, **kwargs
+        )  # type: subprocess.CompletedProcess
+        ccap = capfdbinary.readouterr()
+
+        assert sc.args == c.args == s.args == cc.args, "missmatch in arguments"
+        assert (
+            sc.returncode == c.returncode == s.returncode == cc.returncode
+        ), "missmatch in returncode"
+
+        assert scap.out == scap.err == b"", "subprocess.run() should be capture output"
+
+        assert (
+            sc.stdout == c.stdout == cc.stdout
+        ), f"missmatch in cap stdout {encoding=}"
+        assert (
+            sc.stderr == c.stderr == cc.stderr
+        ), f"missmatch in cap stderr {encoding=}"
+
+        assert ssys.out == csys.out, f"missmatch in console output {encoding=}"
+        assert ssys.err == csys.err, f"missmatch in console error {encoding=}"
+
+        assert scap.out == ccap.out, f"missmatch in captured console output {encoding=}"
+        assert scap.err == ccap.err, f"missmatch in captured console error {encoding=}"
+
+    return run

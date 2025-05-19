@@ -129,38 +129,3 @@ def test_run_python(capfd, tmp_path) -> None:
     assert asys.out == bsys.out
     assert a.stdout == b.stdout
     assert a.returncode == b.returncode
-
-
-@pytest.mark.skip(reason="Not implemented yet")
-@pytest.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
-@pytest.mark.parametrize("encoding", [None, "utf-8", "ansi"], ids=lambda x: f"enc={x}")
-@pytest.mark.parametrize("capture_output", [False], ids=lambda x: f"cap={x}")
-def test_run_ping(
-    capfdbinary: pytest.CaptureFixture,
-    text: bool,
-    encoding: str | None,
-    capture_output: bool,
-) -> None:
-
-    kwargs = {
-        "args": "ping localhost -n 1" if os.name == "nt" else "ping -c 1 localhost",
-        "shell": True,
-        "capture_output": capture_output,
-        "encoding": encoding,
-    }
-
-    a = subprocess.run(**kwargs)  # type: subprocess.CompletedProcess
-    asys = capfdbinary.readouterr()
-
-    b = run(**kwargs)  # type: subprocess.CompletedProcess
-    bsys = capfdbinary.readouterr()
-
-    assert asys == bsys
-
-    assert (a.returncode == b.returncode) and (a.args == b.args)
-
-    if capture_output:
-        pass  # assert (a.stdout == b.stdout) and (a.stderr == b.stderr)
-    else:
-        assert (a.stdout is None) and (a.stderr is None)
-        assert (b.stdout is not None) and (b.stderr is not None)
