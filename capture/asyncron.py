@@ -8,14 +8,11 @@ import locale
 import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+import typing as t
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from collections.abc import Generator
     from collections.abc import Sequence
-
-from typing import Any
-from typing import Literal
 
 
 @contextlib.contextmanager
@@ -62,7 +59,7 @@ class DecodeError(UnicodeDecodeError):
         self,
         /,
         encoding: str,
-        object: Any,
+        object: t.Any,
         start: int,
         end: int,
         reason: str,
@@ -210,11 +207,11 @@ def run(
     capture_output: bool = False,
     timeout: float | None = None,
     check: bool = False,
-    stdin: Literal[None] = None,
-    stdout: Literal[None] = None,
-    stderr: Literal[None] = None,
-    bufsize: Literal[0] = 0,
-    universal_newlines: Literal[False] = False,
+    stdin: t.Literal[None] = None,
+    stdout: t.Literal[None] = None,
+    stderr: t.Literal[None] = None,
+    bufsize: t.Literal[0] = 0,
+    universal_newlines: t.Literal[False] = False,
     **kwargs,
 ) -> subprocess.CompletedProcess:
     """
