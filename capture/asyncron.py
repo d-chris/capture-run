@@ -101,21 +101,18 @@ async def asyncio_run(
     async def reader(
         stream: asyncio.StreamReader,
         buf: io.StringIO | io.BytesIO,
-        output: io.TextIOBase,
+        output: io.TextIOWrapper,
     ) -> None:
 
-        while True:
-            chunk = await stream.readline()
-            if not chunk:
-                break
+        while chunk := await stream.readline():
 
             if is_text:
                 buf.write(chunk.decode(encoding, errors="replace"))
             else:
                 buf.write(chunk)
 
-            output.write(chunk.decode("utf-8", errors="replace"))
-            output.flush()
+            output.buffer.write(chunk)
+            output.buffer.flush()
 
     async def writer(
         stream: asyncio.StreamWriter,
@@ -203,9 +200,9 @@ async def asyncio_run(
 def run(
     args: subprocess._CMD,
     *,
-    input: str | None = None,
+    input: t.Optional[str | bytes | bytearray] = None,
     capture_output: bool = False,
-    timeout: float | None = None,
+    timeout: t.Optional[float] = None,
     check: bool = False,
     stdin: t.Literal[None] = None,
     stdout: t.Literal[None] = None,

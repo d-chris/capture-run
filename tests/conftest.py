@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import pytest as p
 import sys
+
+import pytest as p
 
 
 @p.fixture(
@@ -19,7 +20,7 @@ def encoding(request: p.FixtureRequest) -> str | None:
         ["echo", "nok", ";", "exit", "1"],
         ["echo", "☺ bright", ";", "exit", "0"],
         ["echo", "\u263b dark", ";", "exit", "1"],  # "☻"
-        ["echo", "\U0001f680 rocket"],  # 🚀
+        ["echo", "\U0001f680", ";", "echo", "rocket"],  # 🚀
     ],
     ids=[
         "echo=ok",

@@ -1,5 +1,8 @@
-import pytest as p
+import os
 import subprocess
+
+import pytest as p
+
 from capture import run
 
 
@@ -19,6 +22,50 @@ def test_run_shell(
         "text": text,
         "encoding": encoding,
     }
+
+    a = subprocess.run(
+        capture_output=True, **kwargs
+    )  # type: subprocess.CompletedProcess
+    asys = capfdbinary.readouterr()
+
+    c = subprocess.run(
+        capture_output=False, **kwargs
+    )  # type: subprocess.CompletedProcess
+    csys = capfdbinary.readouterr()
+
+    b = run(capture_output=False, **kwargs)  # type: subprocess.CompletedProcess
+    bsys = capfdbinary.readouterr()
+
+    d = run(capture_output=True, **kwargs)  # type: subprocess.CompletedProcess
+    dsys = capfdbinary.readouterr()
+
+    assert a.args == b.args == c.args == d.args, "missmatch in arguments"
+    assert (
+        a.returncode == b.returncode == c.returncode == d.returncode
+    ), "missmatch in returncode"
+
+    assert asys.out == asys.err == b"", "subprocess.run() should be capture output"
+
+    assert a.stdout == b.stdout == d.stdout, f"missmatch in captured stdout {encoding=}"
+    assert a.stderr == b.stderr == d.stderr, f"missmatch in captured stderr {encoding=}"
+
+    assert csys.out == bsys.out, f"missmatch in console output {encoding=}"
+    assert csys.err == bsys.err, f"missmatch in console error {encoding=}"
+
+    assert asys.out == dsys.out, f"missmatch in captured console output {encoding=}"
+    assert asys.err == dsys.err, f"missmatch in captured console error {encoding=}"
+
+
+def test_run_ping(
+    capfdbinary: p.CaptureFixture,
+) -> None:
+
+    kwargs = {
+        "args": "ping localhost -n 1" if os.name == "nt" else "ping -c 1 localhost",
+        "shell": True,
+    }
+
+    encoding = None
 
     a = subprocess.run(
         capture_output=True, **kwargs
