@@ -8,7 +8,9 @@ import locale
 import os
 import subprocess
 import sys
+import traceback
 import typing as t
+import warnings
 
 if t.TYPE_CHECKING:
     from collections.abc import Generator
@@ -97,15 +99,23 @@ async def asyncio_run(
     shell: bool = False,
     text: bool = False,
     encoding: str | None = None,
+    errors: str | None = None,
+    lazy: bool | str = False,
     **kwargs,
 ) -> subprocess.CompletedProcess:
     # spawn the subprocess with separate pipes
 
     is_text = text or encoding is not None
     encoding = encoding or default_encoding()
+    errors = errors or "strict"
 
     if capture_output:
-        stdout = stderr = devnull = open(os.devnull, "w", encoding=encoding)
+        stdout = stderr = devnull = open(
+            os.devnull,
+            mode="w",
+            encoding=encoding,
+            errors="ignore",
+        )
     else:
         stdout = sys.stdout
         stderr = sys.stderr
@@ -116,33 +126,37 @@ async def asyncio_run(
         output: io.TextIOWrapper,
     ) -> None:
 
-        error: t.Optional[DecodeError] = None
+        tb: t.Optional[str] = None
 
         while chunk := await stream.readline():
-
-            if is_text:
-                try:
-                    s = chunk.decode(encoding, errors="strict")
-                except UnicodeDecodeError as e:
-                    s = chunk.decode(encoding, errors="replace")
-                    if error is None:
-                        error = e
-                finally:
-                    buf.write(s)
-            else:
-                buf.write(chunk)
 
             output.buffer.write(chunk)
             output.buffer.flush()
 
-        if error:
-            raise DecodeError(
-                encoding,
-                error.object,
-                error.start,
-                error.end,
-                error.reason,
-                buf,
+            if not is_text:
+                buf.write(chunk)
+            else:
+                try:
+                    s = chunk.decode(encoding, errors=errors)
+                except UnicodeDecodeError as e:
+                    if lazy is False:
+                        raise e
+
+                    if tb is None:
+                        tb = traceback.format_exc()
+
+                    s = chunk.decode(
+                        encoding,
+                        errors="replace" if lazy is True else lazy,
+                    )
+
+                buf.write(s)
+
+        if tb is not None:
+            warnings.warn(
+                tb,
+                category=UnicodeWarning,
+                stacklevel=2,
             )
 
     async def writer(
@@ -153,12 +167,11 @@ async def asyncio_run(
 
         if input is not None:
             if isinstance(input, str):
-                input = input.encode(encoding)
+                input = input.encode(encoding, errors=errors)
             stream.write(input)
             await stream.drain()
 
         stream.close()
-        await stream.wait_closed()
 
     stdout_buf = io.StringIO(newline=None) if is_text else io.BytesIO()
     stderr_buf = io.StringIO(newline=None) if is_text else io.BytesIO()
@@ -191,18 +204,14 @@ async def asyncio_run(
         await asyncio.wait_for(proc.wait(), timeout=timeout)
     except asyncio.TimeoutError:
         proc.kill()
-        results = await asyncio.gather(proc.wait(), *tasks, return_exceptions=True)
+        await asyncio.gather(proc.wait(), *tasks)
     else:
         timeout = None
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks)
 
     finally:
         if capture_output:
             devnull.close()
-
-        for result in results:
-            if isinstance(result, DecodeError):
-                result.buffer.close()
 
         stdout = getvalue(stdout_buf)
         stderr = getvalue(stderr_buf)

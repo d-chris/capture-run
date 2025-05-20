@@ -63,6 +63,7 @@ def test_run_tools(runner: t.Callable, args: str, text: bool) -> None:
         "args": args,
         "shell": True,
         "text": text,
+        "lazy": True,
     }
 
     runner(**kwargs)

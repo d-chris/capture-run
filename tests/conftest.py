@@ -51,6 +51,7 @@ def runner(capfdbinary: p.CaptureFixture) -> t.Callable:
     def run(**kwargs):
         encoding = kwargs.get("encoding", None)
         _ = kwargs.pop("capture_output", None)
+        lazy = kwargs.pop("lazy", False)
 
         sc = subprocess.run(
             capture_output=True, **kwargs
@@ -63,12 +64,12 @@ def runner(capfdbinary: p.CaptureFixture) -> t.Callable:
         ssys = capfdbinary.readouterr()
 
         c = capture.run(
-            capture_output=False, **kwargs
+            capture_output=False, lazy=lazy, **kwargs
         )  # type: subprocess.CompletedProcess
         csys = capfdbinary.readouterr()
 
         cc = capture.run(
-            capture_output=True, **kwargs
+            capture_output=True, lazy=lazy, **kwargs
         )  # type: subprocess.CompletedProcess
         ccap = capfdbinary.readouterr()
 
