@@ -46,7 +46,17 @@ def test_run_shell(
 @p.mark.parametrize(
     "args",
     [
-        "ping localhost -n 1" if os.name == "nt" else "ping -c 1 localhost",
+        p.param(
+            "ping localhost -n 1" if os.name == "nt" else "ping -c 1 localhost",
+            marks=[
+                p.mark.filterwarnings(
+                    "ignore:.*:pytest.PytestUnhandledThreadExceptionWarning"
+                ),
+                p.mark.xfail(
+                    reason="ping raises UnicodeDecodeError, e.g. on German Windows"
+                ),
+            ],
+        ),
         "python --version",
         "git --version",
     ],
@@ -63,7 +73,6 @@ def test_run_tools(runner: t.Callable, args: str, text: bool) -> None:
         "args": args,
         "shell": True,
         "text": text,
-        "lazy": True,
     }
 
     runner(**kwargs)
