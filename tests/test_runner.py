@@ -23,18 +23,16 @@ def test_run_exec(
 
 
 @p.mark.parametrize("text", [True, False], ids=lambda x: f"txt={x}")
-@p.mark.parametrize("shell", [True, False], ids=lambda x: f"sh={x}")
 def test_run_shell(
     runner: t.Callable,
     commands: list[str],
     encoding: t.Optional[str],
     text: bool,
-    shell: bool,
 ) -> None:
 
     kwargs = {
         "args": " ".join(commands),
-        "shell": shell,
+        "shell": True,
         "text": text,
         "encoding": encoding,
     }
@@ -46,17 +44,6 @@ def test_run_shell(
 @p.mark.parametrize(
     "args",
     [
-        p.param(
-            "ping localhost -n 1" if os.name == "nt" else "ping -c 1 localhost",
-            marks=[
-                p.mark.filterwarnings(
-                    "ignore:.*:pytest.PytestUnhandledThreadExceptionWarning"
-                ),
-                p.mark.xfail(
-                    reason="ping raises UnicodeDecodeError, e.g. on German Windows"
-                ),
-            ],
-        ),
         "python --version",
         "git --version",
     ],

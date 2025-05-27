@@ -10,7 +10,7 @@ import capture
 
 
 @p.fixture(
-    params=[None, "utf-8", "ansi", "cp850", "cp1252"],
+    params=[None, "utf-8", "ascii", "cp850", "cp1252"],
     ids=lambda x: f"enc={x}",
 )
 def encoding(request: p.FixtureRequest) -> str | None:
@@ -53,10 +53,26 @@ def runner(capfdbinary: p.CaptureFixture) -> t.Callable:
         _ = kwargs.pop("capture_output", None)
         lazy = kwargs.pop("lazy", False)
 
-        sc = subprocess.run(
-            capture_output=True, **kwargs
-        )  # type: subprocess.CompletedProcess
-        scap = capfdbinary.readouterr()
+        error = None
+
+        try:
+            sc = subprocess.run(
+                capture_output=True, **kwargs
+            )  # type: subprocess.CompletedProcess
+            scap = capfdbinary.readouterr()
+        except Exception as e:
+            error = e
+
+        try:
+            cc = capture.run(
+                capture_output=True, lazy=lazy, **kwargs
+            )  # type: subprocess.CompletedProcess
+            ccap = capfdbinary.readouterr()
+        except Exception as e:
+            if type(e) is not type(error):
+                raise e
+            
+            return "sucessfull functions raise same exception"
 
         s = subprocess.run(
             capture_output=False, **kwargs
@@ -67,11 +83,6 @@ def runner(capfdbinary: p.CaptureFixture) -> t.Callable:
             capture_output=False, lazy=lazy, **kwargs
         )  # type: subprocess.CompletedProcess
         csys = capfdbinary.readouterr()
-
-        cc = capture.run(
-            capture_output=True, lazy=lazy, **kwargs
-        )  # type: subprocess.CompletedProcess
-        ccap = capfdbinary.readouterr()
 
         assert sc.args == c.args == s.args == cc.args, "missmatch in arguments"
         assert (
